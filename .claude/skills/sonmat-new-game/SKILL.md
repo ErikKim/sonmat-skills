@@ -41,11 +41,11 @@ PC 설치 폴더를 읽기만 해서 아래를 채운다. 추측하지 말고 �
 ### A-2. 훅 — 엔진별로 이미 있는 것부터
 | 엔진 | 이벤트 줄 | 쓰는 것 | 함수 찾기 |
 |---|---|---|---|
-| 언리얼 자체 오디오(P의 거짓) | `ue:<큐>\|<소유자>` | `dll/dshaptics_ue4.dll` | `tools/find_ue4_audio.py` |
-| Wwise(오공, 니어) | `wid:<이벤트번호>:<오브젝트>`, `wsw:<그룹>:<값>:<오브젝트>` | `dll/dshaptics_wwise.dll`(2022 이후 SDK), `dshaptics_wwise_wide.dll`(그 밖) | `dll/find_ak.py`(파일), `dll/find_ak_mem.py`(메모리) |
+| 언리얼 자체 오디오(P의 거짓) | `ue:<큐>\|<소유자>` | `dshaptics_ue4.dll`(부품 레포 `sonmat-hook-ue4`) | `tools/find_ue4_audio.py` |
+| Wwise(오공, 니어) | `wid:<이벤트번호>:<오브젝트>`, `wsw:<그룹>:<값>:<오브젝트>` | `dshaptics_wwise.dll`(2022 이후 SDK, `sonmat-hook-wwise`), `dshaptics_wwise_wide.dll`(그 밖, `sonmat-hook-wwise-wide`) | `dll/find_ak.py`(파일), `dll/find_ak_mem.py`(메모리) |
 | UE4SS Lua(오공 주 흐름) | `lua:<함수>\|<소리>\|<소유자>`, `seq:` | UE4SS 모드 | 없음 |
-| FMOD Ex, 별도 DLL(세키로) | `ue:<소리 이름>\|d<거리cm>`, 이름이 없으면 `ue:#<묶음의 소리 수>.<몇 번째>.<길이>\|…` | `dll/dshaptics_fmodex.dll` + 자리→이름 표 `tools/fmod_ids.py <id>`(프로필 `native.places`) | 없음 — DLL 이 내보내는 공개 함수 이름으로 찾는다 |
-| 소리가 **끝남**(언리얼) | `ue_end:<큐>\|<소유자>` | 같은 `dshaptics_ue4.dll`, 프로필 `native.ActiveSoundDtor` + `native.EndFilter`(이름 조각) | `execPlaySound2D` 안에서 AddNewActiveSound 바로 다음에 같은 객체로 부르는 함수 |
+| FMOD Ex, 별도 DLL(세키로) | `ue:<소리 이름>\|d<거리cm>`, 이름이 없으면 `ue:#<묶음의 소리 수>.<몇 번째>.<길이>\|…` | `dshaptics_fmodex.dll`(`sonmat-hook-fmodex`) + 자리→이름 표 `tools/fmod_ids.py <id>`(프로필 `native.places`) | 없음 — DLL 이 내보내는 공개 함수 이름으로 찾는다 |
+| 소리가 **끝남**(언리얼) | `ue_end:<큐>\|<소유자>` | 같은 `dshaptics_ue4.dll`, `hook.json` 의 `native.sigs.ActiveSoundDtor` + `native.sigs.EndFilter`(이름 조각) | `execPlaySound2D` 안에서 AddNewActiveSound 바로 다음에 같은 객체로 부르는 함수 |
 | MAME(파이널파이트, 캐딜락) | `<프레임> snd:<번호>`, `ram:<이름>:<변화>` | `mods/mame/sonmat` 플러그인 | 소리 명령 주소 + RAM 감시(치트 목록에서 시작) |
 
 **소리 엔진이 게임 옆의 별도 DLL 이면 그쪽이 가장 안전하다**(세키로 `fmodex64.dll`). 공개 API 의 내보낸 함수에 걸면 패턴 탐색도, 인자 추측도, 포장된 실행 파일 읽기도 없다. 그리고 **게임 없이 미리 시험할 수 있다**: 그 DLL 을 시험 프로세스에 무음 출력으로 띄우고 훅을 붙여, 호출이 정상 통과하고 기록이 남는지 본다. 훅을 게임에 처음 붙이기 전에 할 수 있으면 반드시 한다.
@@ -87,10 +87,12 @@ Wwise 함수 찾기에서 배운 것(니어, 10-09):
 ### A-4. 음원 꺼내기 — 훅과 같은 날 한다
 절차는 게임과 무관하게 하나다: 찾기 → 컨테이너 열기 → 목록 → 디코딩 → 48kHz 모노. 게임별로 다른 것(파일명·경로)은 프로필 `source` 에 적는다.
 
-**경로 약속(10-12, `sonmat_paths.py`)**: 게임 폴더 `profiles/<id>/` 가 그대로 그 게임의 레포가 된다. 프로필 안의 데이터 파일(트리·레이어·이름표·규칙)은 **그 폴더 기준** 이름(`"trees.json"`)으로, 소리 폴더는 **`sounds/<id>/` 기준** 이름(`"hap"`, `"spk"`, `"seq"`)으로 적는다. 소리·추출본은 `sounds/<id>/` 에만 쌓이고 git 이 보지 않는다. 게임 데이터를 `dll/`·소리 폴더에 두지 않는다. 리더가 없으면 `tools/soundprep.py` 에 리더를 하나 추가한다(지금: `ue_pak`, `ue_pak_wwise`, `wwise_bnk`, `mame_oki`, `mame_qsound`). 추출본·키는 배포하지 않는다.
+**도구는 레포마다 따로(10-21 사용자: "툴별 레포를 다 따로 파야한다")**: 훅 DLL·로더·풀기 DLL·유니티 플러그인은 하나에 레포 하나(`sonmat-loader`, `sonmat-hook-<엔진>`, `sonmat-crilayla`, `sonmat-unity`, paktool 은 `sonmat-paktool`). 새 엔진의 훅은 새 레포 `sonmat-hook-<이름>`(CI 가 빌드, 태그 `v*` = 릴리스 zip) → `sonmat-games/parts.json` 에 한 줄(주소·sha256·files) → 프로필 `native.dll` 에 파일 이름. 앱을 다시 내지 않아도 된다. 앱 메인에 DLL 소스를 넣지 않는다.
+
+**경로 약속(10-12, `sonmat_paths.py`)**: 게임 폴더 `profiles/<id>/` 가 그대로 그 게임의 레포가 된다. 프로필 안의 데이터 파일(트리·레이어·이름표·규칙)은 **그 폴더 기준** 이름(`"trees.json"`)으로, 소리 폴더는 **`sounds/<id>/` 기준** 이름(`"hap"`, `"spk"`, `"seq"`)으로 적는다. 소리·추출본은 `sounds/<id>/` 에만 쌓이고 git 이 보지 않는다. 게임 데이터를 부품 폴더(`parts/`)·소리 폴더에 두지 않는다(바이트 패턴 `sigs.txt` 도 게임 레포에 두고 `native.sigs_file` 로 부른다: 앱이 DLL 옆에 놓는다). 리더가 없으면 `tools/soundprep.py` 에 리더를 하나 추가한다(지금: `ue_pak`, `ue_pak_wwise`, `wwise_bnk`, `mame_oki`, `mame_qsound`). 추출본·키는 배포하지 않는다.
 
 프로젝트 파일 없는 Wwise 게임(`wwise_bnk`, `tools/wwise_bnk.py`)에서 배운 것:
-- 뱅크는 아카이브 안에 그대로 들어 있는 경우가 많다 → `BKHD` 를 찾아 그 자리에서 읽는다. 아카이브가 파일별 압축(CRI `.cpk` 의 CRILAYLA)이면 파일 표를 읽고 풀어서 다시 찾는다(`dll/crilayla.dll`). 니어 전체 30GB 가 16초.
+- 뱅크는 아카이브 안에 그대로 들어 있는 경우가 많다 → `BKHD` 를 찾아 그 자리에서 읽는다. 아카이브가 파일별 압축(CRI `.cpk` 의 CRILAYLA)이면 파일 표를 읽고 풀어서 다시 찾는다(부품 `sonmat-crilayla`). 니어 전체 30GB 가 16초.
 - "이벤트 → 음원" 연결은 뱅크 버전별 구조를 몰라도 풀린다: 이벤트는 동작 번호 목록, 동작은 대상 번호, 묶음과 소리는 **서로를 가리키는 쌍**이 부모·자식이다. 소리의 음원 번호 위치는 "데이터를 가진 번호가 가장 자주 나오는 자리"로 정한다.
 - 긴 소리(컷씬, 환경)는 뱅크 밖 스트림 파일에 있다. 색인 파일의 레코드 형식은 **실제 파일 이름·`RIFF` 위치와 대조해서** 확정한다(처음 가정이 틀렸고, 60개 중 54개만 맞는 걸 보고 고쳤다 — 전부 맞을 때까지).
 - 컷씬 소리 묶음의 이름 규칙을 찾는다(니어 `ev####_Se`, P의 거짓 `SE_CIN_*`). 끝·건너뛰기 신호가 있으면(`ev####_End`, `se_movie_out`) 프로필 `cutscene.end` 에 넣는다.
@@ -117,7 +119,7 @@ Wwise 함수 찾기에서 배운 것(니어, 10-09):
 만드는 일은 세 겹이다.
 1. **기준**: 전투·이동·사격·컷씬 각각 "어떻게 느껴져야 하는가". 스텔라 블레이드에서 잰 값과 네 게임에서 사용자가 고쳐 준 것이 근거다.
 2. **초기 모델**: 그 기준을 숫자와 파형으로 옮긴 것. `dshaptics/profiles/_model/model.json` — 기준 문장(`standards`), 기본값(`defaults`), 공용 파형(`waves`), **칸**(`slots`: 패링·타격·회피·발소리 … 각 칸의 파형·세기·성격).
-3. **그 게임의 프로필**: 게임이 말해 주는 건 "내 소리 중 어느 것이 어느 칸인가"뿐이다. `profiles/<id>/game.json` 에 머리말(실행 파일·엔진·훅)과 `slots: {칸: 이름 정규식}` 을 쓰고 `python3 tools/new_profile.py <id>` 를 돌리면 `haptics.json` 이 나온다. 그 뒤로는 보통 프로필처럼 손으로 고친다.
+3. **그 게임의 프로필**: 게임이 말해 주는 건 "내 소리 중 어느 것이 어느 칸인가"뿐이다. `profiles/<id>/game.json` 에 머리말(실행 파일·엔진, 훅은 `"hook"`)과 `slots: {칸: 이름 정규식}` 을 쓰고 `python3 tools/new_profile.py <id>` 를 돌리면 `haptics.json`(느낌)과 `hook.json`(연결: 게임 분석 결과 전부 — 훅 DLL·바이트 패턴·UE4SS 와 이 빌드에 필요한 VTable·시그니처. 설치 도구는 이것만 보고 게임 폴더에 통째로 쓴다)이 나온다. 그 뒤로는 보통 프로필처럼 손으로 고친다.
 
 기준을 바꿀 일이 생기면(사용자가 느껴 보고 "이건 전 게임에 이렇게") 모델을 고친다. 한 게임만의 사정이면 그 게임 프로필만 고친다.
 
