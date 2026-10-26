@@ -16,7 +16,7 @@ description: 손맛 햅틱(dshaptics)에 새 게임을 붙이는 절차. 게임�
 
 A 의 끝과 B 의 시작 사이에는 **받아 온 것 표**(`dshaptics/profiles/<id>/intake.md`)가 있다. B 는 이 표만 보고 일한다. B 의 바탕은 **초기 모델**(`dshaptics/profiles/_model/model.json`)이다 — 전투·이동·사격·컷씬 기준과, 그 기준대로 정한 파형·세기·칸.
 
-기준 문서: `dshaptics/ROADMAP.md`(할 일·경과 SSOT), 코드는 `dshaptics/hapticsd.py`(엔진), `tools/soundprep.py`(음원), `profiles/<id>/haptics.json`(게임별 전부).
+기준 문서: `dshaptics/ROADMAP.md`(할 일·경과 SSOT), 코드는 `dshaptics/hapticsd.py`(엔진), `tools/soundprep/`(음원), `profiles/<id>/haptics.json`(게임별 전부).
 
 ## 시작 전에 거르기
 1. **대상인가**: 안티치트·온라인으로 막힌 게임만 하지 않는다. 듀얼센스를 이미 지원하는 게임도 보강할 수 있으니 대상이다(사용자 10-15, 사이버펑크 예) — PCGamingWiki 는 그 게임이 이미 무엇을 내는지 보는 용도. 사용자가 가진 게임인가.
@@ -89,9 +89,9 @@ Wwise 함수 찾기에서 배운 것(니어, 10-09):
 
 **도구는 레포마다 따로(10-21 사용자: "툴별 레포를 다 따로 파야한다")**: 훅 DLL·로더·풀기 DLL·유니티 플러그인은 하나에 레포 하나(`sonmat-loader`, `sonmat-hook-<엔진>`, `sonmat-crilayla`, `sonmat-unity`, paktool 은 `sonmat-paktool`). 새 엔진의 훅은 새 레포 `sonmat-hook-<이름>`(CI 가 빌드, 태그 `v*` = 릴리스 zip) → `sonmat-games/parts.json` 에 한 줄(주소·sha256·files) → 프로필 `native.dll` 에 파일 이름. 앱을 다시 내지 않아도 된다. 앱 메인에 DLL 소스를 넣지 않는다.
 
-**경로 약속(10-12, `sonmat_paths.py`)**: 게임 폴더 `profiles/<id>/` 가 그대로 그 게임의 레포가 된다. 프로필 안의 데이터 파일(트리·레이어·이름표·규칙)은 **그 폴더 기준** 이름(`"trees.json"`)으로, 소리 폴더는 **`sounds/<id>/` 기준** 이름(`"hap"`, `"spk"`, `"seq"`)으로 적는다. 소리·추출본은 `sounds/<id>/` 에만 쌓이고 git 이 보지 않는다. 게임 데이터를 부품 폴더(`parts/`)·소리 폴더에 두지 않는다(바이트 패턴 `sigs.txt` 도 게임 레포에 두고 `native.sigs_file` 로 부른다: 앱이 DLL 옆에 놓는다). 리더가 없으면 `tools/soundprep.py` 에 리더를 하나 추가한다(지금: `ue_pak`, `ue_pak_wwise`, `wwise_bnk`, `mame_oki`, `mame_qsound`). 추출본·키는 배포하지 않는다.
+**경로 약속(10-12, `sonmat_paths.py`)**: 게임 폴더 `profiles/<id>/` 가 그대로 그 게임의 레포가 된다. 프로필 안의 데이터 파일(트리·레이어·이름표·규칙)은 **그 폴더 기준** 이름(`"trees.json"`)으로, 소리 폴더는 **`sounds/<id>/` 기준** 이름(`"hap"`, `"spk"`, `"seq"`)으로 적는다. 소리·추출본은 `sounds/<id>/` 에만 쌓이고 git 이 보지 않는다. 게임 데이터를 부품 폴더(`parts/`)·소리 폴더에 두지 않는다(바이트 패턴 `sigs.txt` 도 게임 레포에 두고 `native.sigs_file` 로 부른다: 앱이 DLL 옆에 놓는다). 리더가 없으면 `tools/soundprep/` 에 리더 모듈을 하나 추가하고 `READERS` 에 한 줄 넣는다(지금: `ue_pak`, `ue_pak_wwise`, `wwise_bnk`, `mame_oki`, `mame_qsound`). 추출본·키는 배포하지 않는다.
 
-프로젝트 파일 없는 Wwise 게임(`wwise_bnk`, `tools/wwise_bnk.py`)에서 배운 것:
+프로젝트 파일 없는 Wwise 게임(`wwise_bnk`, `tools/soundprep/wwise_bnk.py`)에서 배운 것:
 - 뱅크는 아카이브 안에 그대로 들어 있는 경우가 많다 → `BKHD` 를 찾아 그 자리에서 읽는다. 아카이브가 파일별 압축(CRI `.cpk` 의 CRILAYLA)이면 파일 표를 읽고 풀어서 다시 찾는다(부품 `sonmat-crilayla`). 니어 전체 30GB 가 16초.
 - "이벤트 → 음원" 연결은 뱅크 버전별 구조를 몰라도 풀린다: 이벤트는 동작 번호 목록, 동작은 대상 번호, 묶음과 소리는 **서로를 가리키는 쌍**이 부모·자식이다. 소리의 음원 번호 위치는 "데이터를 가진 번호가 가장 자주 나오는 자리"로 정한다.
 - 긴 소리(컷씬, 환경)는 뱅크 밖 스트림 파일에 있다. 색인 파일의 레코드 형식은 **실제 파일 이름·`RIFF` 위치와 대조해서** 확정한다(처음 가정이 틀렸고, 60개 중 54개만 맞는 걸 보고 고쳤다 — 전부 맞을 때까지).
@@ -179,7 +179,7 @@ Wwise 함수 찾기에서 배운 것(니어, 10-09):
 ### 만들고, 확인하고, 넘긴다
 1. `profiles/<id>/game.json` 을 쓴다. 칸 설명은 모델의 `look_for`. 모델에 칸이 없는 것은 `extra_rules`·`waves`·`triggers` 로. 정지 이벤트처럼 이름만 같은 것은 `extra_rules` 맨 앞에서 걸러 낸다.
 2. `python3 tools/new_profile.py <id>` → 칸마다 몇 개의 이름이 걸리는지 세어 본다(한 칸에 수백 개가 걸리면 정규식이 넓다).
-3. `python tools/soundprep.py <id> --maker` 로 진동 클립·스피커 소리·컷씬 트랙을 만든다(`sounds/<id>/`). `--maker` 를 붙여야 게임 파일에서 읽은 표(`trees*.json`·`rules_auto.json`)가 게임 폴더에 써진다 — 붙이지 않은 실행(플레이어 PC)은 게임 폴더를 건드리지 않고 표를 소리 옆에 둔다. **리더가 없으면 지금 만든다** — 그린 파형만으로 넘기지 않는다. 피격처럼 이름이 음성(신음)인 칸은 `[정규식, {"drawn": true}]` 로 그린 파형을 쓴다.
+3. `python tools/soundprep <id> --maker` 로 진동 클립·스피커 소리·컷씬 트랙을 만든다(`sounds/<id>/`). `--maker` 를 붙여야 게임 파일에서 읽은 표(`trees*.json`·`rules_auto.json`)가 게임 폴더에 써진다 — 붙이지 않은 실행(플레이어 PC)은 게임 폴더를 건드리지 않고 표를 소리 옆에 둔다. **리더가 없으면 지금 만든다** — 그린 파형만으로 넘기지 않는다. 피격처럼 이름이 음성(신음)인 칸은 `[정규식, {"drawn": true}]` 로 그린 파형을 쓴다.
 4. **패드 없이 확인**: 가짜 이벤트를 엔진에 흘려 칸마다 의도한 파형·세기로 나가는지, 남의 소리·음악·UI 가 조용한지 본다. 엔진을 고쳤으면 `python sonmat/tools/enginetest.py` — 모든 게임에 같은 이벤트를 고치기 전 엔진과 지금 엔진에 넣어 패드로 가는 것을 비교한다(같으면 0, 다르면 어느 꼬리표가 어떻게 달라졌는지 표가 나온다. 빌드도 이것을 돌린다). 새 게임의 `kinds` 가 엉뚱한 이름을 잡지 않는지는 클립 이름 전부를 `kinds` 에 대 보고 종류별로 나열해 눈으로 본다(P의 거짓에서 `Fatal` 이 마무리 일격의 모터·옷자락 소리 30개를 잡았다).
 5. `tools/deploy_pc.sh` 로 목록 확인 → `--go`. 음원 클립은 PC 것을 덮지 말고 새 것만. 엔진 다시 띄우기 = `taskkill pythonw` → `schtasks /run /tn SonmatTray`(명령을 `&` 로 길게 잇지 말고 따로 보낸다 — 이어 붙였을 때 안 돌았다).
    - **PC 에서 `soundprep --maker` 를 돌렸으면 그 게임의 `trees*.json`·`rules_auto.json`·표를 맥으로 먼저 가져온다.** 안 그러면 다음 `deploy_pc.sh --go` 가 맥의 옛것으로 덮는다(세키로 10-11, 백업 zip 에서 되돌림).

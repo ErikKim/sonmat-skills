@@ -25,7 +25,7 @@ model: opus
 - 우리 프로필·엔진 코드를 고치지 않는다. 읽고 적기만 한다.
 
 ## 입력/출력
-- 입력: 브리프, PC(ssh), 맥의 `dshaptics/` 도구(`tools/paktool`, `tools/ue_assets.py`, `tools/keyfetch.py` 등)
+- 입력: 브리프, PC(ssh), 맥의 `dshaptics/` 도구(`tools/paktool`, `tools/soundprep/ue_assets.py`, `tools/download/keyfetch.py` 등)
 - 출력(맥): `dshaptics/_workspace/<조사명>/1x_<게임>_catalog.json`(이벤트마다 한 줄: layer, event, kind, 수치) + `1x_<게임>_rules.md`(층별 요약, 없는 층, 못 읽은 것, 쓴 방법). 분석 스크립트는 `scripts/<게임>_*.py` 로 같이 남긴다.
 
 ## 에러 핸들링
