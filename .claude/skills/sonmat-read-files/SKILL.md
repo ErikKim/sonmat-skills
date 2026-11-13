@@ -14,7 +14,7 @@ description: 손맛 햅틱 새 게임의 1단계 — 게임을 켜지 않고 PC 
 | 소리 엔진 | 실행 파일·폴더의 문자열(`AK::`, `Wwise`, UE `SoundCue`, `FMOD`, MAME 롬) | 훅·리더를 고른다 |
 | 소리 이름 | 게임 파일의 큐 이름, 공개 이름표(`bnnm/wwiser-utils` 의 `wwnames/<게임>.txt`), MAME 은 번호 | 규칙을 이름으로 쓸 수 있는지. 번호뿐이면 일이 몇 배다 |
 | 음원 보관 | pak(키 필요?) / 낱개 `.bnk`·`.wsp` / cpk·dat / 롬 | 리더를 고르거나 새로 쓴다(`readers.md`) |
-| 입력 방식 | 실행 파일에 `XInputSetState` 만 있으면 XInput 전용 | Steam Input 을 켜야 하고, 그 진동이 우리 햅틱을 막을 수 있다 |
+| 입력 방식 | 실행 파일 문자열로 **둘 중 하나로 가른다**: `XInputSetState` 만 → XInput 전용 → `steam_input: "on"`. `DualSense`·`WinDualShock`·`scePad` 문자열이나 exe 옆 `libScePad*.dll` 이 있으면 (XInput 이 같이 있어도) 듀얼센스 직접 지원 → `"off"`. "둘 다 있어 못 가름"은 없다(11-12 오공 시험판이 그렇게 비웠다 — 직접 지원 게임은 늘 XInput 도 같이 갖는다) | XInput 전용은 Steam Input 을 켜야 패드를 알아보고, 직접 지원은 Steam Input 이 끼면 진동을 가로챈다. 3단계 `steam_input` 값이 여기서 정해진다 |
 | 실행 파일 보호 | 코드 구역 엔트로피(8.0 근처 = 스팀 포장으로 암호화) | 함수는 켜진 게임의 메모리에서만 찾는다(2단계) |
 | 게임 자체 진동 | 패드에 직접 쓰는지(듀얼센스 직접 지원 `bUseWinDualSense` 등), 컷씬 진동 표가 있는지 | 실행 조건 안내. 원래 진동은 로더의 `sonmat_rumble.dll` 이 막고 기록한다 |
 | **원래 진동 표** | 아래 절 | **어느 순간이 진동하는가 = 분류 근거.** 3단계 칸 배정과 4단계 빈자리 대조의 입력 |
